@@ -1,0 +1,37 @@
+(function($){
+    var ProfileAjax = function() {
+        $.extend(this, {
+            url: "",
+            ajx: null,
+            
+            setAjaxUrl: function(username) {
+                ajx = this;
+                ajx.url = '/usr/' + username + '/edit/section';
+            },
+            
+            updateInfo: function(sectionId, sectionValue, responseHandler, errorHandler) {
+                $.ajax(
+                    {
+                        type: 'POST',
+                        url: ajx.url,
+                        data: { sectionId: sectionId, sectionValue: sectionValue},
+                        success: responseHandler,
+                        error: errorHandler,
+                        dataType: 'json',
+                        beforeSend: function(xhr) {
+                            xhr.setRequestHeader('srt', editTkn);
+                        }  
+                    }
+                );
+            }
+
+        });
+    };
+    
+    instance = null;
+    
+    $.cmp = $.cmp || {};
+    $.cmp.profileAjax = function(){
+        return instance ? instance : new ProfileAjax();
+    };
+})(jQuery);

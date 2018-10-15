@@ -1,28 +1,75 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
 import './App.css';
 
-class App extends Component {
+export default class App extends Component {
+  
+  input = null
+  
+  state = {
+    html: 'Initial HTML',
+    fetching: false,
+  }
+  
+  fetchHTML(url) {
+    this.setState({ fetching: true })
+    
+    return fetch(url)
+      .then(resp => resp.text())
+      .then(html => this.setState({ html }))
+      .then(() => this.setState({ fetching: false }))
+  }
+  
+  /**
+   * @see https://reactjs.org/docs/handling-events.html
+   **/
+  handleInput = event => {
+    const  { value } = this.input
+
+    console.log('value', value)
+    
+    if (value === 'https://www.airbnb.com.au/users/show/99824610') {
+      this.fetchHTML('http://localhost:3000/airbnb.html')
+    }
+    
+    if (value === 'https://www.ebay.com.au/usr/twiz911') {
+      this.fetchHTML('http://localhost:3000/ebay.html')
+    }
+  }
+  
+  onInputRef = input => {
+    this.input = input
+  }
+  
   render() {
     return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
+      <div>
+        <div style={styles.search}>
+          <label>Search</label>
+          <input onChange={this.handleInput} ref={this.onInputRef} />
+        </div>
+        <div style={styles.popupContainer}>
+          <div 
+            style={styles.popup} 
+            dangerouslySetInnerHTML={ { __html: this.state.html } }
           >
-            Learn React
-          </a>
-        </header>
-      </div>
-    );
+          </div>
+        </div>
+        <div>{this.state.fetching && 'loading...'}</div>
+      </div>  
+    )
+    
   }
+
 }
 
-export default App;
+const styles = {
+  popupContainer: {
+    position: 'relative',
+  },
+  popup: {
+    position: 'absolute',
+    top: '15px',
+    left: '15px',
+    border: '5px solid #000'
+  }
+}

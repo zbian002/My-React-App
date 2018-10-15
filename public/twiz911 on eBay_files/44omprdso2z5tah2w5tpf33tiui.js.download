@@ -1,0 +1,184 @@
+(function($){
+    
+    var MediaUpload = function() {
+        $.extend(this, {
+            elem: null,
+            sectionId: null,
+            tempImage: null,
+            type: "",
+            default_cover: "https://ir.ebaystatic.com/pictures/aw/social/profile_coverimg_wood.jpg",
+            default_profile: "https://ir.ebaystatic.com/pictures/aw/social/avatar.png",
+            mu: null,
+            profileImg: null,
+            coverImg: null,
+            
+            init: function(coverImage, profileImage) {
+                mu = this;
+                mu.profileImg = profileImage;
+                mu.coverImg = coverImage;
+                mu.setupButtonsForEdit();
+                $(".upld").on("click", function() {
+                    mu.updatingSectionInfo($(this).parents('.media'));
+                });
+                
+                $(".cmmt").on("click", function() {
+                    mu.updatingSectionInfo($(this).parents('.media'));
+                    mu.commit(); 
+                });
+                
+                $(".rmv").on("click", function(e) {
+                    $lastFocusElem = (e.target || e.srcElement);
+                    $(this).parents('.media').find('.remove_photo.dialog').dialog();
+                    e.preventDefault();                   
+                });
+                
+                $(".rmv_ok").on("click", function() {
+                    var parent = $(this).parents('.media');
+                    mu.updatingSectionInfo(parent);
+                    parent.find('.remove_photo.dialog').dialog('hide');
+                    mu.showLoader(parent.attr('id'));
+                    mu.remove();                    
+                });
+                
+                $(".rmv_cancel").on("click", function() {
+                    $(this).parents('.media').find('.dialog').dialog('hide');                
+                });
+                
+                $(".imgbin").on("change", function() {
+                    type = "upload";
+                    mu.showLoader($(this).parents('.media').attr('id'));
+                    $(this).parent().submit();
+                });
+                
+                /* If content of the iframe (for image upload / commit / remove) changes then fire this function */
+                $(function() {
+                    $('#msa_frame').load(function(e) {
+                        var json = $('#msa_frame').contents().find('body').html();           
+                        
+                        if (json != null && json.indexOf('<!--') > -1) {
+                            json = json.substring(0, json.indexOf('<!--'));
+                        }
+                        
+                        if (json != null && json != '' && json != undefined) {
+                            var parsedJson = jQuery.parseJSON(json);
+                            if (parsedJson.model.error != null && parsedJson.model.error.errors[0] == 'NOT_AUTHORIZED') {
+                                mu.showErrorMessage('signInErrorPic', e);
+                            } else if (parsedJson.model.error != null && parsedJson.model.error.errors[0] == 'IMAGE_UPLOAD_ERROR') {
+                                mu.showErrorMessage('imageToBig', e);
+                            } else if (parsedJson.model.error != null && parsedJson.model.error.errors[0] == 'MISSING_IMG_DATA') {
+                                mu.showErrorMessage('dismiss', e);
+                            } else if (parsedJson.model.status == 'failure' && parsedJson.model.temp_pic == undefined) {
+                                mu.showErrorMessage('serviceFailurePic', e);
+                            }  else if (parsedJson.model.status != 'failure' && parsedJson.model.temp_pic != undefined && parsedJson.model.temp_pic.ack == 'failure') {
+                                // Handle EPS errors
+                                if (parsedJson.model.temp_pic.errors[0].code == '2191116') {
+                                    mu.showErrorMessage('notSupported', e);
+                                } else if (parsedJson.model.temp_pic.errors[0].code == '21917241') {
+                                    mu.showErrorMessage('fileCorrupted', e);
+                                } else if (parsedJson.model.temp_pic.errors[0].code == '21917074') {
+                                    mu.showErrorMessage('imageToSmall', e);
+                                } else if (parsedJson.model.temp_pic.errors[0].code == '21916604') {
+                                    mu.showErrorMessage('imageToBig', e);
+                                } else {
+                                    mu.showErrorMessage('serviceFailurePic', e);
+                                }                            
+                            } else {
+                                // Success scenarios
+                                if (type == "upload") {
+                                    mu.tempImage = parsedJson.model.temp_pic.image;
+                                    if (parsedJson.model.status != 'failure' && parsedJson.model.temp_pic != undefined && parsedJson.model.temp_pic.ack != 'failure' && parsedJson.model.temp_pic.image != null) {
+                                        mu.commit();
+                                    } 
+                                } else if (type == "commit") {
+                                    if (parsedJson.model.status != 'failure') {
+                                        if (mu.sectionId == "998") {
+                                            if($.rover){
+                                                $.rover.track("p2545226.m2531.l4857");
+                                            }
+                                            mu.hideLoader();
+                                            mu.profileImg.updateFinished(mu.tempImage);
+                                        } else {
+                                            if($.rover){
+                                                $.rover.track("p2545226.m2532.l4858");
+                                            }
+                                            mu.hideLoader();
+                                            mu.coverImg.saveCoverImage(mu.tempImage);
+                                            mu.coverImg.showRepositionBanner();
+                                        }
+                                    } else {
+                                        mu.showErrorMessage('serviceFailurePic', e);
+                                    }
+                                } else {
+                                    if (parsedJson.model.status != 'failure') {
+                                        mu.hideLoader();
+                                        if (mu.sectionId == "998") {
+                                            mu.profileImg.updateFinished(mu.default_profile);
+                                        } else {                                
+                                            mu.coverImg.saveCoverImage(mu.default_cover);                                           
+                                        }
+                                    } else {
+                                        mu.showErrorMessage('serviceFailurePic', e);
+                                    }
+                                }   
+                            }
+                        } else {
+                            mu.showErrorMessage('serviceFailurePic', e);
+                        }      
+                    }); 
+                });
+            },
+
+            commit: function() {
+                type = "commit";
+                var commitValue = '[{"section_id":' + mu.sectionId + ',"url":"' + mu.tempImage +'","media":100}]';
+                $('#commitMedia').attr('value',commitValue);
+                $('#eps_commit').submit();
+            },
+            
+            remove: function() {
+                type = "remove";
+                var imageSrc = mu.elem.find('.img').attr('src');
+                var commitValue = '[{"section_id":' + mu.sectionId + ',"url":"' + imageSrc +'","media":100}]';
+                $('#deleteMedia').attr('value',commitValue);
+                $('#eps_delete').submit();
+            },
+    
+            updatingSectionInfo: function(elem) {                
+                mu.elem = elem;
+                mu.sectionId = elem.attr('sectionId');
+            },
+            
+            setupButtonsForEdit: function() {
+                //$('.acts').show();
+            },
+            
+            showLoader: function(id) {
+                $('#' + id).find('.img_ldr').show();
+            },
+            
+            hideLoader: function(className) {
+                $('.img_ldr').hide();
+            },
+            
+            showErrorMessage: function(id, e) {
+                if (id != "dismiss") {
+                    var dialog = mu.elem.find('.error_message.dialog');
+                    $lastFocusElem = (e.target || e.srcElement);
+                    dialog.find('.err').hide();
+                    dialog.dialog();
+                    dialog.find('#' + id).show();
+                }
+                mu.hideLoader();
+                e.preventDefault(); 
+            }
+        });
+    };
+    
+    instance = null;
+    
+    $.cmp = $.cmp || {};
+    $.cmp.mediaUpload = function(){
+        return instance ? instance : new MediaUpload();
+    };
+
+})(jQuery);

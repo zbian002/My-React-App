@@ -1,0 +1,56 @@
+(function($){
+    var LazyImage = function(){
+        var self = this;
+        $.extend(self, {
+            load : function(selector, attribute){
+                var parentSelector = selector ? selector : "body", 
+                    parent = $(parentSelector), 
+                    dataAttr = attribute ? attribute : "src",
+                    dataAttrStr = "data-" + dataAttr,
+                    imgs = parent.find("*[" + dataAttrStr + "]");
+                imgs.each(function(){
+                    var img = $(this), imageFit = img.data("fit"), lazyImage = img.hasClass('lazy-image'), parent = img.parent();
+                    if (!lazyImage) {
+                        if(imageFit){
+                            img.hide();
+                            img.on("load", function(e){
+                                var thisImg = this, 
+                                    w = thisImg.naturalWidth, h = thisImg.naturalHeight, 
+                                    pw = parent.innerWidth(), ph = parent.innerHeight();
+                                    if (navigator.userAgent.indexOf(("IE 8") > -1)) {
+                                        var theImage = new Image();
+                                        theImage.src = $(thisImg).attr("src");
+                                        w = theImage.width;
+                                        h = theImage.height;
+                                    }
+                                    
+                                    var toW = pw, toH = (pw * h) / w, toTop, toLeft;
+                                    if(toH < ph){
+                                        toH = ph;
+                                        toW = (w * ph) / h;
+                                    }
+                                    toTop = (ph - toH)/2;
+                                    toLeft = (pw - toW)/2;
+                                    $(thisImg).css({width:toW, height:toH, top:toTop, left:toLeft, position:"absolute"});
+                                    img.show();
+                                    img.removeAttr(dataAttrStr);
+                            }).attr("src", img.data(dataAttr));
+                        } else {
+                            img.attr("src", img.data(dataAttr));
+                        }
+                    }
+                });
+            }
+        });
+    };
+    var instance = null;
+    $.LazyImage = (function(){
+        return instance === null ? new LazyImage() : instance;
+    })();
+    $(document).on("ready", function(){
+        $.LazyImage.load();
+    });
+    $(window).on("load", function(){
+        $.LazyImage.load("body", "onload-src");
+    });
+})(jQuery);

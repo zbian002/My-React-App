@@ -1,0 +1,232 @@
+(function($){
+    var CoverImage = function() {
+        var cover = $('#cover_image'),
+            actionLayer = $('.cvrimg .acts');
+        
+        $('.cvrimg .chnge.edit_btn').on('click', function(e) {
+            actionLayer.css("display") == "none" ? actionLayer.slideDown() : actionLayer.slideUp();
+            e.stopPropagation();
+        });
+        $('.cvrimg .acts').on('click', function(e) {
+            e.stopPropagation();
+        });
+        $('body').on('click', function() {
+           if (actionLayer.css("display") != "none")
+               actionLayer.slideUp();
+        });
+        $('#cover_image .upld').on('click', function() {
+            $('.drg').hide();
+            cvr.showCoverImage();     
+            cvr.showHideButtons();
+            if($.rover){
+                $.rover.track("p2545226.m2532.l4579");
+            }
+        });
+        $('#cover_image .edit_btn').hover(
+            function() {
+                cover.find('.tooltp').show();
+            }, 
+            function() {
+                cover.find('.tooltp').hide();
+            }
+        );
+        
+        $('#cover_image .tooltp').hover(
+            function() {
+                cover.find('.tooltp').show();
+            }, 
+            function() {
+                cover.find('.tooltp').hide();
+            }
+        );
+        
+        
+        $.extend(this, {
+            coverImage: "",
+            coverOffset: 0,
+            container: $('#cover_wrapper'),
+            bgElement: "",
+            oldSrc: "",
+            oldOffset: "",
+            startContainmentPoint: 0,
+            EndContainmentPoint: 0,
+            bgPosition: {
+                x: 0,
+                y: 0
+            },
+            cvr: null,
+            profileAjax: null,
+            defaultCover: "https://ir.ebaystatic.com/pictures/aw/social/profile_coverimg_wood.jpg",
+            
+            init: function(profileAjax) {
+                cvr = this;     
+                cvr.profileAjax = profileAjax;
+                cvr.setupEditButtons();
+                cvr.setupDefaultValues();
+                cvr.showHideButtons();
+                
+                var coverImage = $("#cover_image");
+                coverImage.addClass("edit");
+            },
+            
+            // Default values for Cover image and its offset
+            setupDefaultValues: function() {  
+                cvr.coverImage = $('#dummy_cover_img').attr('src');
+                cvr.coverOffset = $('#dummy_cover_img').attr('starty');
+            },
+            
+            showHideButtons: function() {
+                cvr.closeEdit();
+                cvr.container.find('img').attr('src') == cvr.defaultCover ? cover.find('.add.edit_btn').show() : cover.find('.chnge.edit_btn').show();
+            },
+            
+            closeEdit: function() {
+                $('.cvrimg .acts').hide();
+                $('.cvrimg .edit_btn').hide();                
+            },
+            
+            doneEditing: function() {
+                cvr.closeEdit();
+                actionLayer.slideUp();
+                $('.drg').hide();
+                cover.removeClass('edit');
+            },
+            
+            setupEditButtons: function() {
+                $('.cvrimg .save').on('click', function() {    
+                    $('.drg').hide();
+                    cvr.saveOffset(cvr.bgPosition.y);
+                    cvr.showHideButtons();
+                });
+                
+                $('.cvrimg .cancel').on('click', function() {
+                    $('.drg').hide();
+                    cvr.showCoverImage();     
+                    cvr.showHideButtons();
+                });
+                
+                $('.rpstn').on('click', function() {
+                    if ($('.drg.rpstn').css('display') == 'block') {
+                        $('.drg.rpstn').hide();
+                    }
+                    $('.drg.rpstn_msg').slideDown('slow');
+                    if (actionLayer.css("display") != "none") {
+                        actionLayer.slideUp();
+                    }
+                    cvr.enableEdit();
+                });
+                                
+                cover.find('.edit_btn').hover(                      
+                    function() {
+                        $(this).find('.icons').removeClass('pen').addClass('pen_actv');
+                    },
+                    function() {
+                        $(this).find('.icons').removeClass('pen_actv').addClass('pen');
+                    }
+                );     
+                
+                $('.cvrimg .upld').mousemove(function(e) {
+                    var subtrct = navigator.userAgent.indexOf('IE') > -1 ? 100 : 30; 
+                    var offset = $(this).offset(); 
+                    var relX = e.pageX - offset.left;
+                    $(this).find('.imgbin').css('margin-left', relX-subtrct);
+                });
+            },
+                      
+            enableEdit: function() {                 
+                cvr.setupForEdit();               
+                cvr.setupContainmentPoints();
+                cvr.dragCoverImage();
+            },
+            
+            setupForEdit: function() {
+                cvr.container.html('<img alt="cover image" id="cover_handler" class="moveCursor cov_img img" src=""/>');
+                cvr.bgElement = $('#cover_handler');
+                cvr.bgElement.attr('src', cvr.coverImage);
+                cvr.bgElement.css('top', cvr.coverOffset);
+                // Scroll the page to top else the cover image doesn't get dragged as expected
+                $('html,body').scrollTop(0);
+            },
+                      
+            setupContainmentPoints: function() {
+                cvr.startContainmentPoint = cvr.container.offset().top + cvr.bgElement.parent().height() - cvr.bgElement.height(); 
+                cvr.endContainmentPoint =  cvr.container.offset().top;
+            },
+            
+            // Main function -> Handles reposition of the Cover image. Uses Jquery UI
+            dragCoverImage: function() {                            
+                $('#cover_wrapper img').draggable({
+                    axis: 'y',
+                    scroll: 'true',
+                    containment: [- cvr.bgElement.offset().left, cvr.startContainmentPoint, cvr.bgElement.parent().offset().left, cvr.endContainmentPoint],
+                    start: function(event, ui) {
+                      ypos = ui.position.top;
+                    },
+                    stop: function(event, ui) {
+                      cvr.bgPosition.y = ui.position.top;       
+                    }, 
+                    drag: function(event, ui) {
+                        if (ui.position.top < cvr.bgElement.parent().height() - cvr.bgElement.height()) {
+                            ui.position.top = cvr.bgElement.parent().height() - cvr.bgElement.height();
+                        } else if (ui.position.top > 0 ) {
+                            ui.position.top = 0;
+                        }
+                      }
+                });
+            },
+            
+            saveCoverImage: function(src) {
+                cvr.coverImage = src;
+                cvr.saveOffset(0);
+            },
+            
+            // Ajax call to save offset of the given hero image
+            saveOffset: function(val) {
+                var profileAjax = cvr.profileAjax;
+                profileAjax.updateInfo(999, parseInt(val,10),
+                    function(data, textStatus, jqXHR) 
+                    {   
+                        if (data.error == null) {
+                            cvr.coverOffset = val;
+                            cvr.doneUpdatingCoverImage();    
+                        } else {
+                            data.error.errors == "NOT_AUTHORIZED" ? userBio.showErrorMessage('signInErrorText') : userBio.showErrorMessage('serviceFailureText');
+                        }  
+                    },
+                    function(jqXHR, textStatus, errorThrown) 
+                    {
+                        // Show error message
+                    }
+                );
+            },
+            
+            doneUpdatingCoverImage: function() {                
+                $('#dummy_cover_img').attr('src',  cvr.coverImage);
+                $('#dummy_cover_img').attr('starty', cvr.coverOffset);                
+                cvr.showCoverImage();
+                cvr.showHideButtons();
+            },           
+            
+            // Function call to show the cover image after any manipulation.
+            showCoverImage: function() {
+                cvr.container.html('<img alt="cover image" id="cover_handler" class="defaultCursor cov_img img" src=""/>');
+                cvr.bgElement = $('#cover_handler');
+                cvr.bgElement.attr('src', cvr.coverImage);
+                cvr.bgElement.css('top', cvr.coverOffset);
+                cvr.bgElement.css('position', 'relative');            
+            },
+            
+            showRepositionBanner: function() {               
+                $('.drg.rpstn').slideDown();
+            }
+            
+        });
+    };
+    
+    instance = null;
+    
+    $.cmp = $.cmp || {};
+    $.cmp.coverImage = function(){
+        return instance ? instance : new CoverImage();
+    };
+})(jQuery);

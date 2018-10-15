@@ -1,0 +1,30 @@
+/*eBay standard JS - Page width detection*/
+
+(function(){
+    var ck = raptor.require('ebay.cookies');
+
+    var PageLayout = function(){
+    t = this;
+    t.b = 1250;//b - resolution border, currently consider anything below 1200px width as the same. 1200 + 15 margin at both side + 20 for vertical scrollbar
+    $(window).bind('resize beforeunload', this.sr.bind(this));
+    };
+
+    PageLayout.prototype={
+    bits : [25, 26, 40, 41],
+    sr : function(c){//Set rsolution
+    var t = this,
+    pbf = ck.readCookie("dp1","pbf"),
+    w = $(window).width();
+    for(var a = pbf || "#", d = 0, b = t.bits, f = t.bits.length; d < f; d++, b >>= 1){
+    if((d == 0 || d == 2) && w >= t.b){
+    a = ck.setBitFlag(a, t.bits[d], 1);
+    }else{
+    a = ck.setBitFlag(a, t.bits[d], 0);
+    }
+    }
+    ck.writeCookielet("dp1", "pbf", a);
+    }
+    };
+    // Instantiate
+    new PageLayout;
+})();
