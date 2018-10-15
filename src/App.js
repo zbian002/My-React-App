@@ -44,8 +44,8 @@ export default class App extends Component {
     return (
       <div>
         <div style={styles.search}>
-          <label>Search</label>
-          <input onChange={this.handleInput} ref={this.onInputRef} />
+          <input type="text" ref={this.onInputRef} />
+          <input type="button" value="Load account" onClick={this.handleInput}/>
         </div>
         <div style={styles.popupContainer}>
           <div 
@@ -54,12 +54,9 @@ export default class App extends Component {
           >
           </div>
         </div>
-        <div>{this.state.fetching && 'loading...'}</div>
       </div>  
     )
-    
   }
-
 }
 
 const styles = {
