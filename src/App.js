@@ -6,8 +6,9 @@ export default class App extends Component {
   input = null
   
   state = {
-    html: 'Initial HTML',
+    html: '',
     fetching: false,
+    localUrl: null,
   }
   
   fetchHTML(url) {
@@ -28,11 +29,13 @@ export default class App extends Component {
     console.log('value', value)
     
     if (value === 'https://www.airbnb.com.au/users/show/99824610') {
-      this.fetchHTML('http://localhost:3000/airbnb.html')
+      this.setState({ localUrl: 'http://localhost:3000/airbnb.html' })
+      this.fetchHTML(this.state.localUrl)
     }
     
     if (value === 'https://www.ebay.com.au/usr/twiz911') {
-      this.fetchHTML('http://localhost:3000/ebay.html')
+      this.setState({ localUrl: 'http://localhost:3000/ebay.html' })
+      this.fetchHTML(this.state.localUrl)
     }
   }
   
@@ -43,30 +46,16 @@ export default class App extends Component {
   render() {
     return (
       <div>
-        <div style={styles.search}>
+        <div className='inputBox'>
           <input type="text" ref={this.onInputRef} />
           <input type="button" value="Load account" onClick={this.handleInput}/>
         </div>
-        <div style={styles.popupContainer}>
-          <div 
-            style={styles.popup} 
-            dangerouslySetInnerHTML={ { __html: this.state.html } }
-          >
-          </div>
+        <div>
+        <iframe src={this.state.localUrl} 
+          className='webView'
+          title="myPage"/>
         </div>
       </div>  
     )
-  }
-}
-
-const styles = {
-  popupContainer: {
-    position: 'relative',
-  },
-  popup: {
-    position: 'absolute',
-    top: '15px',
-    left: '15px',
-    border: '5px solid #000'
   }
 }

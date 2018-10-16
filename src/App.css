@@ -1,3 +1,11 @@
-.App {
+.inputBox {
   text-align: center;
+}
+
+.webView {
+  width: 450px;
+  height: 450px;
+  display: block;
+  margin: 0 auto;
+  margin-top: 20px;
 }
